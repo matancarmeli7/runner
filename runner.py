@@ -31,12 +31,19 @@ def create_arguments():
 
     return args
 
-def exec_command(command):
-    process = run(command.split(), stdout=PIPE, stderr=PIPE)
-    print(process.stdout)
+# Execute the desired command 
+def multiple_exec_command(command, command_num, failed):
+    num_of_failed_commands = 0
+    for i in range(command_num):
+        process = run(command.split(), stdout=PIPE, stderr=PIPE)
+        if process.returncode != 0:
+            num_of_failed_commands += 1
+        if num_of_failed_commands == failed:
+            print("The execution of the command failed for {} times".format(failed))
+
+    
 
 if __name__ == "__main__":
     args = create_arguments()
     command = input("Enter your command: ")
-    for i in range(args.c):
-        exec_command(command)
+    multiple_exec_command(command, args.c, args.failed_count)

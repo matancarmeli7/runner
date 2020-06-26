@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 import argparse
 from subprocess import run, PIPE
+import logging
+from datetime import datetime
 
 # Defines what arguments the runner.py can get
 def create_arguments():
@@ -10,14 +12,14 @@ def create_arguments():
                         help= 'Number of times to run the given command (default: 1)',)
     parser.add_argument('--failed-count', metavar='N', type=int, default=0,
                         help= 'Number of allowed failed command invocation attempts before givingup (default: 1)')
-    parser.add_argument('--sys-trace', metavar='',
+    parser.add_argument('--sys-trace', metavar='', action='store_const', const="True",
                         help= 'Creates a log for each of the following values:\n'
                               '  * Disk IO\n  * Memory\n  * Process & CPU usage of the command\n  * Network information')
-    parser.add_argument('--call-trace', metavar='',
+    parser.add_argument('--call-trace', metavar='', action='store_const', const="True",
                         help= 'For each failed execution, add to a log with all the system calls that ran by the command')
-    parser.add_argument('--log-trace', metavar='',
+    parser.add_argument('--log-trace', metavar='', action='store_const', const="True",
                         help= 'For each failed execution, add to a log the stdout and the stdin of the command')
-    parser.add_argument('--debug', metavar='',
+    parser.add_argument('--debug', metavar='', action='store_const', const="True",
                         help= 'Debug mode')
     args = parser.parse_args()
 
@@ -31,6 +33,19 @@ def create_arguments():
 
     return args
 
+# Creates the log file
+def create_log_file():
+    global logger
+    logger = logging.getLogger('runner')
+    hdlr = logging.FileHandler('{}'.format(datetime.now().strftime('/home/matan/runner_%H_%M_%d_%m_%Y.log')))
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    hdlr.setFormatter(formatter)
+    logger.addHandler(hdlr)
+
+# write an error log to the log file
+def write_to_log(message):
+    logger.error(message)
+
 # Execute the desired command 
 def multiple_exec_command(command, command_num, failed):
     num_of_failed_commands = 0
@@ -38,8 +53,10 @@ def multiple_exec_command(command, command_num, failed):
         process = run(command.split(), stdout=PIPE, stderr=PIPE)
         if process.returncode != 0:
             num_of_failed_commands += 1
-        if num_of_failed_commands == failed:
-            print("The execution of the command failed for {} times".format(failed))
+        if (num_of_failed_commands == failed and
+            num_of_failed_commands != 0):
+            print("The execution of the command failed for {} times".format(num_of_failed_commands))
+            break
 
     
 

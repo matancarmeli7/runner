@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 import argparse
+from subprocess import run, PIPE
 
 # Defines what arguments the runner.py can get
 def create_arguments():
@@ -23,8 +24,19 @@ def create_arguments():
     if args.failed_count > args.c:
         parser.error('--failed-count value must be equal or lower than -c value')
 
+    if args.failed_count < 0:
+        if args.c >= 0:
+            parser.error('--failed-count must be equal or bigger that 0')
+        parser.error('-c and --failed-count must be equal or bigger that 0')
+
     return args
+
+def exec_command(command):
+    process = run(command.split(), stdout=PIPE, stderr=PIPE)
+    print(process.stdout)
 
 if __name__ == "__main__":
     args = create_arguments()
     command = input("Enter your command: ")
+    for i in range(args.c):
+        exec_command(command)

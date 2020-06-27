@@ -41,12 +41,16 @@ def run_command(command, q):
         command = "strace -c {}".format(command)
     command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
     q.put(str(command_data.pid))
-    output= command_data.communicate()
+    outs= command_data.communicate()
     q_retun_code.put(str(command_data.returncode))
     if (args.call_trace and
         command_data.returncode != 0):
-        message = "system calls of the commad: {}".format(str(output[1]).split("% time")[1])
+        message = "system calls of the commad: {}".format(str(outs[1]).split("% time")[1])
         write_error_log(message)
+    if (args.log_trace and
+        command_data.returncode != 0):
+        message = "The stdout of the command is: {}, the stderr of the command is: {}"\
+                  .format(str(outs[0]), str(outs[1]).split("% time")[0])
         
 
 # Gets the command cpu usage and the threads that it runs    

@@ -106,10 +106,14 @@ def write_info_log(message):
 
 # Function that run the desired comand and adds fitures if needed
 def create_runner(command, command_num, failed):
+    global num_of_failed_commands
     num_of_failed_commands = 0
+    global executed_commands
+    executed_commands = 0
     for _ in range(command_num):
         command_process = Process(target=run_command, args=(command,q))
         command_process.start()
+        executed_commands += 1
         
         if args.sys_trace:
             functions = [
@@ -132,7 +136,12 @@ def create_runner(command, command_num, failed):
         if (num_of_failed_commands == failed and
             num_of_failed_commands != 0):
             print("The execution of the command failed for {} times".format(num_of_failed_commands))
-            break   
+            break
+        
+def print_statistics():
+    print("--- {} command statistics ---".format(command))
+    print("{} commands executed, {} succeeded and {} failed"\
+          .format(executed_commands, executed_commands-num_of_failed_commands, num_of_failed_commands))
 
 if __name__ == "__main__":
     args = create_arguments()
@@ -142,3 +151,5 @@ if __name__ == "__main__":
     if args.sys_trace or args.call_trace or args.log_trace:
         create_log_file()
     create_runner(command, args.c, args.failed_count)
+    print_statistics()
+    

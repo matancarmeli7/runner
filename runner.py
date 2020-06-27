@@ -4,8 +4,11 @@ from subprocess import PIPE, Popen
 import logging
 from datetime import datetime
 import psutil
-from multiprocessing import Process, Queue
+from threading import Thread
 import pdb
+import signal
+import sys
+import time
 
 # Defines what arguments the runner.py can get
 def create_arguments():
@@ -37,32 +40,42 @@ def create_arguments():
     return args
 
 # Execute the desired command 
-def run_command(command, q):
-    if args.call_trace:
-        command = "strace -c {}".format(command)
-    command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
-    q.put(str(command_data.pid))
-    outs= command_data.communicate()
-    q_retun_code.put(str(command_data.returncode))
-    if (args.call_trace and
-        command_data.returncode != 0):
-        message = "system calls of the commad: {}".format(str(outs[1]).split("% time")[1])
-        write_error_log(message)
-    if (args.log_trace and
-        command_data.returncode != 0):
-        message = "The stdout of the command is: {}, the stderr of the command is: {}"\
-                  .format(str(outs[0]), str(outs[1]).split("% time")[0])
+def run_command(command):
+    try:
+        global pid
+        global return_code
+        return_code = None
+        pid = 0
+        if args.call_trace:
+            command = "strace -c {}".format(command)
+        command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
+        pid = command_data.pid
+        outs= command_data.communicate()
+        return_code = command_data.returncode
+        if (args.call_trace and
+            command_data.returncode != 0):
+            message = "system calls of the commad: {}".format(str(outs[1]).split("% time")[1])
+            write_error_log(message)
+        if (args.log_trace and
+            command_data.returncode != 0):
+            message = "The stdout of the command is: {}, the stderr of the command is: {}"\
+                      .format(str(outs[0]), str(outs[1]).split("% time")[0])
+    except OSError as error:
+        print(error)
         
 
 # Gets the command cpu usage and the threads that it runs    
 def get_command_cpu_usage_and_threads():
-    try:
-        p = psutil.Process(int(q.get()))
-        message = 'cpu usage of the command: {}, and the threads that it runs are: {}'\
-                  .format(p.cpu_percent(), p.threads())
-        write_info_log(message)
-    except psutil.NoSuchProcess:
-        print("The execution of the command was too fast")
+    while return_code == None:
+        try:
+            print(pid)
+            p = psutil.Process(pid)
+            message = 'cpu usage of the command: {}, and the threads that it runs are: {}'\
+                    .format(p.cpu_percent(), p.threads())
+            write_info_log(message)
+            time.sleep( 0.5 )
+        except psutil.NoSuchProcess:
+            pass
 
 # Gets the total number of disk i\o
 def get_total_disk_io():
@@ -112,8 +125,8 @@ def create_runner(command, command_num, failed):
     global executed_commands
     executed_commands = 0
     for _ in range(command_num):
-        command_process = Process(target=run_command, args=(command,q))
-        command_process.start()
+        command_thread = Thread(target=run_command, args=(command,))
+        command_thread.start()
         executed_commands += 1
         
         if args.sys_trace:
@@ -122,16 +135,15 @@ def create_runner(command, command_num, failed):
                     get_total_disk_io, 
                     get_total_network_cards, 
                     get_memory]
-            processes = []
+            threads = []
             for function in range(len(functions)):
-                processes.append(Process(target=functions[function]))
-                processes[function].start()
+                threads.append(Thread(target=functions[function]))
+                threads[function].start()
                 
-            for process in processes:
-                process.join()
+            for thread in threads:
+                thread.join()
              
-        command_process.join
-        return_code = int(q_retun_code.get())
+        command_thread.join()
         if return_code != 0:
             num_of_failed_commands += 1
         if (num_of_failed_commands == failed and
@@ -148,8 +160,6 @@ def print_statistics():
 if __name__ == "__main__":
     args = create_arguments()
     command = input("Enter your command: ")
-    q = Queue()
-    q_retun_code = Queue()
     if args.sys_trace or args.call_trace or args.log_trace:
         create_log_file()
     if args.debug:

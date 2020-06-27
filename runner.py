@@ -157,7 +157,14 @@ def print_statistics():
     print("{} commands executed, {} succeeded and {} failed"\
           .format(executed_commands, executed_commands-num_of_failed_commands, num_of_failed_commands))
 
+# Handle ctrl+c
+def signal_handler(sig, frame):
+    print("Program was interrupted by Ctrl+C!")
+    print_statistics()
+    sys.exit(0)
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal_handler)
     args = create_arguments()
     command = input("Enter your command: ")
     if args.sys_trace or args.call_trace or args.log_trace:

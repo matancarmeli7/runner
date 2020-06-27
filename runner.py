@@ -68,10 +68,9 @@ def run_command(command):
 def get_command_cpu_usage_and_threads():
     while return_code == None:
         try:
-            print(pid)
             p = psutil.Process(pid)
             message = 'cpu usage of the command: {}, and the threads that it runs are: {}'\
-                    .format(p.cpu_percent(), p.threads())
+                    .format(p.cpu_percent(interval=0.1), p.threads())
             write_info_log(message)
             time.sleep( 0.5 )
         except psutil.NoSuchProcess:

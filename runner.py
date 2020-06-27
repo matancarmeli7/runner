@@ -37,11 +37,19 @@ def create_arguments():
 
 # Execute the desired command 
 def run_command(command, q):
+    if args.call_trace:
+        command = "strace -c {}".format(command)
     command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
     q.put(str(command_data.pid))
-    _, _ = command_data.communicate()
+    output= command_data.communicate()
     q_retun_code.put(str(command_data.returncode))
-    
+    if (args.call_trace and
+        command_data.returncode != 0):
+        message = "system calls of the commad: {}".format(str(output[1]).split("% time")[1])
+        write_error_log(message)
+        
+
+# Gets the command cpu usage and the threads that it runs    
 def get_command_cpu_usage_and_threads():
     try:
         p = psutil.Process(int(q.get()))
@@ -50,14 +58,16 @@ def get_command_cpu_usage_and_threads():
         write_info_log(message)
     except psutil.NoSuchProcess:
         print("The execution of the command was too fast")
-        
+
+# Gets the total number of disk i\o
 def get_total_disk_io():
     disk_io_reads = psutil.disk_io_counters().read_count
     disk_io_writes = psutil.disk_io_counters().write_count
     message = 'Number of disk io reads: {}, Number of disk io writes: {}, Total number of disk io: {}'\
               .format(disk_io_reads, disk_io_writes, disk_io_reads+disk_io_writes)
     write_info_log(message)
-    
+
+# Gets the total network card package counters
 def get_total_network_cards():
     network_packets_sent = psutil.net_io_counters().packets_sent
     network_packets_recv = psutil.net_io_counters().packets_recv
@@ -65,6 +75,7 @@ def get_total_network_cards():
               .format(network_packets_sent, network_packets_recv, network_packets_sent+network_packets_recv)
     write_info_log(message)
 
+# Gets the used memory in the server
 def get_memory():
     memory = float("{:.2f}".format(psutil.virtual_memory().used/1073741824))
     message = "The used memory is: {}".format(memory)
@@ -88,7 +99,8 @@ def write_error_log(message):
 # write an info message to the log file
 def write_info_log(message):
     logger.info(message)
-    
+
+# Function that run the desired comand and adds fitures if needed
 def create_runner(command, command_num, failed):
     num_of_failed_commands = 0
     for _ in range(command_num):

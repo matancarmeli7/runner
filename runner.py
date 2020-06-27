@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 import psutil
 from multiprocessing import Process, Queue
+import pdb
 
 # Defines what arguments the runner.py can get
 def create_arguments():
@@ -137,7 +138,8 @@ def create_runner(command, command_num, failed):
             num_of_failed_commands != 0):
             print("The execution of the command failed for {} times".format(num_of_failed_commands))
             break
-        
+ 
+# Print statistics on the return codes       
 def print_statistics():
     print("--- {} command statistics ---".format(command))
     print("{} commands executed, {} succeeded and {} failed"\
@@ -150,6 +152,8 @@ if __name__ == "__main__":
     q_retun_code = Queue()
     if args.sys_trace or args.call_trace or args.log_trace:
         create_log_file()
+    if args.debug:
+        pdb.set_trace()
     create_runner(command, args.c, args.failed_count)
     print_statistics()
     

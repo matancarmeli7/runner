@@ -49,17 +49,20 @@ def run_command(command, call_trace, log_trace):
         global return_code
         return_code = None
         pid = 0
+        
         if call_trace:
             command = "strace -c {}".format(command)
         command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
         pid = command_data.pid
         outs= command_data.communicate()
         return_code = command_data.returncode
+        
         if (call_trace and
             return_code != 0):
             message = "system calls of the commad: {}"\
                       .format(str(outs[1]).split("% time")[1])
             write_error_log(message)
+            
         if (log_trace and
             return_code != 0):
             message = "The stdout of the command is: {}, the stderr of the command is: {}"\
@@ -107,13 +110,17 @@ def get_memory():
 
 # Creates the log file
 def create_log_file():
+    log_file = '/home/matan/runner'
+    log_file = '{}'.format(datetime.now().strftime(log_file + '_%H_%M_%d_%m_%Y.pcap'))
     global logger
     logger = logging.getLogger('runner')
-    hdlr = logging.FileHandler('{}'.format(datetime.now().strftime('/home/matan/runner_%H_%M_%d_%m_%Y.log')))
+    hdlr = logging.FileHandler('{}'.format(log_file))
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
     logger.setLevel(logging.INFO)
+    # For test purpose
+    return log_file
 
 # Write an error message to the log file
 def write_error_log(message):
@@ -133,10 +140,13 @@ def write_net_trace(command_thread):
     tcpdump_command_data = Popen(tcpdump_command.split(), stdout=PIPE, stderr=PIPE)
     command_thread.join()
     tcpdump_command_data.terminate()
+    
     if return_code == 0:
         remove(pcap_file_name)
-    
-    
+    else:
+        # For test purpose
+        return pcap_file_name
+
 # Print statistics on the return codes       
 def print_statistics():
     print("--- {} command statistics ---".format(command))
@@ -155,6 +165,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
     num_of_failed_commands = 0
     global executed_commands
     executed_commands = 0
+    
     for _ in range(command_num):
         command_thread = Thread(target=run_command, args=(command, call_trace, log_trace))
         command_thread.start()
@@ -167,6 +178,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                     get_total_network_cards, 
                     get_memory]
             threads = []
+            
             for function in range(len(functions)):
                 threads.append(Thread(target=functions[function]))
                 threads[function].start()
@@ -175,15 +187,19 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                 thread.join()
         
         if net_trace:
-            write_net_trace(command_thread)
+            write_net_trace(command_thread)    
         else: 
             command_thread.join()
+            
         if return_code != 0:
             num_of_failed_commands += 1
+            
         if (num_of_failed_commands == failed and
             num_of_failed_commands != 0):
             print("The execution of the command failed for {} times".format(num_of_failed_commands))
+            # For test purpose
             return executed_commands
+        # For test purpose
         if executed_commands == command_num:
             return executed_commands
 
@@ -191,10 +207,13 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     args = create_arguments()
     command = input("Enter your command: ")
+    
     if args.sys_trace or args.call_trace or args.log_trace:
         create_log_file()
+        
     if args.debug:
         pdb.set_trace()
+        
     create_runner(
         command, args.c, args.failed_count, args.sys_trace, args.call_trace, args.log_trace, args.net_trace)
     print_statistics()

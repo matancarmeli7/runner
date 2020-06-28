@@ -43,24 +43,24 @@ def create_arguments():
     return args
 
 # Execute the desired command 
-def run_command(command):
+def run_command(command, call_trace, log_trace):
     try:
         global pid
         global return_code
         return_code = None
         pid = 0
-        if args.call_trace:
+        if call_trace:
             command = "strace -c {}".format(command)
         command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
         pid = command_data.pid
         outs= command_data.communicate()
         return_code = command_data.returncode
-        if (args.call_trace and
+        if (call_trace and
             return_code != 0):
             message = "system calls of the commad: {}"\
                       .format(str(outs[1]).split("% time")[1])
             write_error_log(message)
-        if (args.log_trace and
+        if (log_trace and
             return_code != 0):
             message = "The stdout of the command is: {}, the stderr of the command is: {}"\
                       .format(str(outs[0]), str(outs[1]).split("% time")[0])
@@ -124,7 +124,9 @@ def write_info_log(message):
     logger.info(message)
 
 # Create a ‘pcap’ file with the network traffic during the execution.     
-def write_net_trace(pcap_file_name, command_thread):
+def write_net_trace(command_thread):
+    pcap_file_name = '/home/matan/runner'
+    pcap_file_name = '{}'.format(datetime.now().strftime(pcap_file_name + '_%H_%M_%d_%m_%Y.pcap'))
     f = open(pcap_file_name, "a")
     f.close()
     tcpdump_command = 'tcpdump -w {}'.format(pcap_file_name)
@@ -148,17 +150,17 @@ def signal_handler(sig, frame):
     sys.exit(0)
     
 # Function that run the desired comand and adds fitures if needed
-def create_runner(command, command_num, failed, pcap_file_name):
+def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace, net_trace):
     global num_of_failed_commands
     num_of_failed_commands = 0
     global executed_commands
     executed_commands = 0
     for _ in range(command_num):
-        command_thread = Thread(target=run_command, args=(command,))
+        command_thread = Thread(target=run_command, args=(command, call_trace, log_trace))
         command_thread.start()
         executed_commands += 1
         
-        if args.sys_trace:
+        if sys_trace:
             functions = [
                     get_command_cpu_usage_and_threads,
                     get_total_disk_io, 
@@ -172,8 +174,8 @@ def create_runner(command, command_num, failed, pcap_file_name):
             for thread in threads:
                 thread.join()
         
-        if args.net_trace:
-            write_net_trace(pcap_file_name, command_thread)
+        if net_trace:
+            write_net_trace(command_thread)
         else: 
             command_thread.join()
         if return_code != 0:
@@ -181,7 +183,8 @@ def create_runner(command, command_num, failed, pcap_file_name):
         if (num_of_failed_commands == failed and
             num_of_failed_commands != 0):
             print("The execution of the command failed for {} times".format(num_of_failed_commands))
-            break
+            return executed_commands
+        return executed_commands
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
@@ -191,8 +194,7 @@ if __name__ == "__main__":
         create_log_file()
     if args.debug:
         pdb.set_trace()
-    pcap_file_name = '/home/matan/runner'
-    pcap_file_name = '{}'.format(datetime.now().strftime(pcap_file_name + '_%H_%M_%d_%m_%Y.pcap'))
-    create_runner(command, args.c, args.failed_count, pcap_file_name)
+    create_runner(
+        command, args.c, args.failed_count, args.sys_trace, args.call_trace, args.log_trace, args.net_trace)
     print_statistics()
     

@@ -127,11 +127,16 @@ def write_error_log(message):
 def write_info_log(message):
     logger.info(message)
 
-# Create a ‘pcap’ file with the network traffic during the execution.     
-def write_net_trace(command_thread, pcap_file_name):
+# Creates pcap file
+def create_pcap_file(pcap_file_name):
     pcap_file_name = '{}'.format(datetime.now().strftime(pcap_file_name + '_%H_%M_%d_%m_%Y.pcap'))
     f = open(pcap_file_name, "a")
     f.close()
+    return pcap_file_name
+
+# Create a ‘pcap’ file with the network traffic during the execution.     
+def write_net_trace(command_thread, pcap_file_name):
+    pcap_file_name = create_pcap_file(pcap_file_name)
     tcpdump_command = 'tcpdump -w {}'.format(pcap_file_name)
     tcpdump_command_data = Popen(tcpdump_command.split(), stdout=PIPE, stderr=PIPE)
     command_thread.join()
@@ -139,9 +144,6 @@ def write_net_trace(command_thread, pcap_file_name):
     
     if return_code == 0:
         remove(pcap_file_name)
-    else:
-        # For test purpose
-        return pcap_file_name
 
 # Print statistics on the return codes       
 def print_statistics():

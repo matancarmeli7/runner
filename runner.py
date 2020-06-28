@@ -159,7 +159,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
         command_thread = Thread(target=run_command, args=(command, call_trace, log_trace))
         command_thread.start()
         executed_commands += 1
-        
+
         if sys_trace:
             functions = [
                     get_command_cpu_usage_and_threads,
@@ -184,7 +184,8 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
             num_of_failed_commands != 0):
             print("The execution of the command failed for {} times".format(num_of_failed_commands))
             return executed_commands
-        return executed_commands
+        if executed_commands == command_num:
+            return executed_commands
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)

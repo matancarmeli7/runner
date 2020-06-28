@@ -47,27 +47,17 @@ def run_command(command, call_trace, log_trace):
     try:
         global pid
         global return_code
+        global outs
         return_code = None
         pid = 0
         
         if call_trace:
             command = "strace -c {}".format(command)
+            
         command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
         pid = command_data.pid
         outs= command_data.communicate()
         return_code = command_data.returncode
-        
-        if (call_trace and
-            return_code != 0):
-            message = "system calls of the commad: {}"\
-                      .format(str(outs[1]).split("% time")[1])
-            write_error_log(message)
-            
-        if (log_trace and
-            return_code != 0):
-            message = "The stdout of the command is: {}, the stderr of the command is: {}"\
-                      .format(str(outs[0]), str(outs[1]).split("% time")[0])
-            write_error_log(message)
             
     except OSError as error:
         print(error)
@@ -75,46 +65,53 @@ def run_command(command, call_trace, log_trace):
 
 # Gets the command cpu usage and the threads that it runs    
 def get_command_cpu_usage_and_threads():
+    global max_cpu
+    global command_threads
+    max_cpu = 0
+    command_threads = {}
+    
     while return_code is None:
         try:
             p = psutil.Process(pid)
-            message = 'cpu usage of the command: {}, and the threads that it runs are: {}'\
-                    .format(p.cpu_percent(interval=0.1), p.threads())
-            write_info_log(message)
+            
+            if p.cpu_percent(interval=0.1) > max_cpu:
+                max_cpu = p.cpu_percent(interval=0.1)
+                
+            for child in p.threads():
+                if child.id not in command_threads.values():
+                    child_p = psutil.Process(child.id)
+                    command_threads.update({child_p.name(): child.id})
+
             time.sleep( 0.5 )
         except psutil.NoSuchProcess:
             pass
 
 # Gets the total number of disk i\o
 def get_total_disk_io():
+    global disk_io_reads
+    global disk_io_writes
     disk_io_reads = psutil.disk_io_counters().read_count
     disk_io_writes = psutil.disk_io_counters().write_count
-    message = 'Number of disk io reads: {}, Number of disk io writes: {}, Total number of disk io: {}'\
-              .format(disk_io_reads, disk_io_writes, disk_io_reads+disk_io_writes)
-    write_info_log(message)
 
 # Gets the total network card package counters
 def get_total_network_cards():
+    global network_packets_sent
+    global network_packets_recv
     network_packets_sent = psutil.net_io_counters().packets_sent
     network_packets_recv = psutil.net_io_counters().packets_recv
-    message = 'Number of network packets sent: {}, Number of packets recived: {}, Total number of network packets: {}'\
-              .format(network_packets_sent, network_packets_recv, network_packets_sent+network_packets_recv)
-    write_info_log(message)
 
 # Gets the used memory in the server
 def get_memory():
+    global memory
     memory = float("{:.2f}".format(psutil.virtual_memory().used/1073741824))
-    message = "The used memory is: {}".format(memory)
-    write_info_log(message)
-    
 
 # Creates the log file
-def create_log_file():
-    log_file = '/home/matan/runner'
-    log_file = '{}'.format(datetime.now().strftime(log_file + '_%H_%M_%d_%m_%Y.pcap'))
+def create_log_file(log_file):
+    log_file = '{}'.format(datetime.now().strftime(log_file + '_%H_%M_%d_%m_%Y.log'))
     global logger
-    logger = logging.getLogger('runner')
+    logger = logging.getLogger('runner{}'.format(num_of_failed_commands))
     hdlr = logging.FileHandler('{}'.format(log_file))
+    print(hdlr.baseFilename)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
@@ -131,8 +128,7 @@ def write_info_log(message):
     logger.info(message)
 
 # Create a ‘pcap’ file with the network traffic during the execution.     
-def write_net_trace(command_thread):
-    pcap_file_name = '/home/matan/runner'
+def write_net_trace(command_thread, pcap_file_name):
     pcap_file_name = '{}'.format(datetime.now().strftime(pcap_file_name + '_%H_%M_%d_%m_%Y.pcap'))
     f = open(pcap_file_name, "a")
     f.close()
@@ -187,12 +183,41 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                 thread.join()
         
         if net_trace:
-            write_net_trace(command_thread)    
+            pcap_file_name = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)
+            write_net_trace(command_thread, pcap_file_name)    
         else: 
             command_thread.join()
             
         if return_code != 0:
             num_of_failed_commands += 1
+            
+            if sys_trace or call_trace or log_trace:
+                log_file = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)
+                create_log_file(log_file)
+                
+                if call_trace:
+                    message = 'system calls of the commad: {}'\
+                              .format(str(outs[1]).split("% time")[1])
+                    write_error_log(message)
+                
+                if log_trace:
+                    message = 'The stdout of the command is: {}, the stderr of the command is: {}'\
+                              .format(str(outs[0]), str(outs[1]).split("% time")[0])
+                    write_error_log(message)
+                    
+                if sys_trace:
+                    cpu_and_threads_message = 'cpu usage of the command: {}, and the threads that it runs are: {}'\
+                                              .format(max_cpu, command_threads)
+                    write_info_log(cpu_and_threads_message)
+                    disk_io_message = 'Number of disk io reads: {}, Number of disk io writes: {}, Total number of disk io: {}'\
+                                      .format(disk_io_reads, disk_io_writes, disk_io_reads+disk_io_writes)
+                    write_info_log(disk_io_message)
+                    network_counters_message = 'Number of network packets sent: {}, Number of packets recived: {}, Total number of network packets: {}'\
+                                               .format(network_packets_sent, network_packets_recv, network_packets_sent+network_packets_recv)
+                    write_info_log(network_counters_message)
+                    memory_message = "The used memory is: {}".format(memory)
+                    write_info_log(memory_message)
+                               
             
         if (num_of_failed_commands == failed and
             num_of_failed_commands != 0):
@@ -207,9 +232,6 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     args = create_arguments()
     command = input("Enter your command: ")
-    
-    if args.sys_trace or args.call_trace or args.log_trace:
-        create_log_file()
         
     if args.debug:
         pdb.set_trace()
@@ -217,4 +239,3 @@ if __name__ == "__main__":
     create_runner(
         command, args.c, args.failed_count, args.sys_trace, args.call_trace, args.log_trace, args.net_trace)
     print_statistics()
-    

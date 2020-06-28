@@ -14,3 +14,9 @@ def test_should_create_log_file():
     log_file = runner.create_log_file(
         "runner_test")
     assert log_file == correct_log_file
+    
+def test_should_create_pcap_file():
+    correct_pcap_file = '{}'.format(datetime.now().strftime('runner_test_%H_%M_%d_%m_%Y.pcap'))
+    pcap_file = runner.create_pcap_file(
+        "runner_test")
+    assert pcap_file == correct_pcap_file

@@ -198,7 +198,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                 thread.join()
         
         if net_trace:
-            pcap_file_name = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)                       
+            pcap_file_name = 'runner_number_{}_date'.format(num_of_failed_commands)                       
             write_net_trace(command_thread, pcap_file_name)    
         else: 
             command_thread.join()
@@ -207,7 +207,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
             num_of_failed_commands += 1
             
             if sys_trace or call_trace or log_trace:
-                log_file = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)
+                log_file = 'runner_number_{}_date'.format(num_of_failed_commands)
                 create_log_file(log_file)
                 
                 if call_trace:

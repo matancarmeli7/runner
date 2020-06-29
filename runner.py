@@ -54,8 +54,13 @@ def run_command(command, call_trace, log_trace):
         if call_trace:
             command = "strace -c {}".format(command)
             
-        command_data = Popen(command.split(), stdout=PIPE, stderr=PIPE)
+        command_data = Popen(command, stdout=PIPE, stderr=PIPE, shell=True)
         pid = command_data.pid
+        command_process = psutil.Process(pid)
+        
+        if command_process.name() is 'sh':
+            pid = command_process.children()[0].pid
+            
         outs= command_data.communicate()
         return_code = command_data.returncode
             
@@ -73,9 +78,10 @@ def get_command_cpu_usage_and_threads():
     while return_code is None:
         try:
             p = psutil.Process(pid)
+            cpu_percent = p.cpu_percent(interval=0.1)
             
-            if p.cpu_percent(interval=0.1) > max_cpu:
-                max_cpu = p.cpu_percent(interval=0.1)
+            if cpu_percent > max_cpu:
+                max_cpu = cpu_percent
                 
             for child in p.threads():
                 if child.id not in command_threads.values():
@@ -132,8 +138,13 @@ def write_info_log(message):
 # Creates pcap file
 def create_pcap_file(pcap_file_name):
     pcap_file_name = '{}'.format(datetime.now().strftime(pcap_file_name + '_%H_%M_%d_%m_%Y.pcap'))
+    
+    if path.exists(pcap_file_name):
+        remove(pcap_file_name)
+        
     f = open(pcap_file_name, "a")
     f.close()
+    print(pcap_file_name)
     return pcap_file_name
 
 # Create a ‘pcap’ file with the network traffic during the execution.     
@@ -187,11 +198,7 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                 thread.join()
         
         if net_trace:
-            pcap_file_name = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)
-            
-            if path.exists(log_file):
-                remove(log_file)
-                        
+            pcap_file_name = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)                       
             write_net_trace(command_thread, pcap_file_name)    
         else: 
             command_thread.join()

@@ -2,6 +2,7 @@
 from subprocess import PIPE, run
 from datetime import datetime
 import pytest
+import time
 import runner
 
 def test_should_run_cmd_n_times_succefully():
@@ -31,5 +32,13 @@ def test_should_create_log_file_and_check_if_sys_trace_option_works():
     runner.create_runner(
         'ls -l some_not_existing_file', 1, 0, True, False, False, False)
     test_command_output = run('grep cpu {0}; grep disk {0}; grep network {0}; grep memory {0}'\
+                              .format(correct_log_file), shell=True)
+    assert test_command_output.returncode == 0
+    
+def test_should_create_log_file_and_check_if_call_trace_option_works():
+    correct_log_file = '{}'.format(datetime.now().strftime('/home/matan/runner_number_1_date_%H_%M_%d_%m_%Y.log'))
+    runner.create_runner(
+        'ls -l some_not_existing_file', 1, 0, False, True, False, False)
+    test_command_output = run('grep calls {0}'\
                               .format(correct_log_file), shell=True)
     assert test_command_output.returncode == 0

@@ -215,9 +215,15 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                 create_log_file(log_file)
                 
                 if call_trace:
-                    message = 'system calls of the commad: {}'\
-                              .format(str(outs[1]).split("% time")[1])
-                    write_error_log(message)
+                    
+                    if len(str(outs[1]).split("% time")) > 1:
+                        message = 'system calls of the commad: {}'\
+                                  .format(str(outs[1]).split("% time")[1])
+                        write_error_log(message)
+                    else:
+                        message = '{} and therfore there is no system calls'\
+                            .format(outs[1])
+                        write_error_log(message)
                 
                 if log_trace:
                     message = 'The stdout of the command is: {}, the stderr of the command is: {}'\

@@ -33,7 +33,6 @@ def create_arguments():
         'before givingup (default: 0)')
     parser.add_argument(
         '--sys-trace',
-        metavar='',
         action='store_const',
         const='True',
         help='Creates a log for each of the following values:\n'
@@ -41,27 +40,23 @@ def create_arguments():
         '* Process & CPU usage of the command\n  * Network information')
     parser.add_argument(
         '--call-trace',
-        metavar='',
         action='store_const',
         const='True',
         help='For each failed execution, '
         'add to a log with all the system calls that ran by the command')
     parser.add_argument(
         '--log-trace',
-        metavar='',
         action='store_const',
         const='True',
         help='For each failed execution, '
         'add to a log the stdout and the stdin of the command')
     parser.add_argument(
         '--debug',
-        metavar='',
         action='store_const',
         const='True',
         help='Debug mode')
     parser.add_argument(
         '--net-trace',
-        metavar='',
         action='store_const',
         const='True',
         help='For each failed execution, '
@@ -224,11 +219,11 @@ def create_runner(
         command,
         command_num,
         failed,
-        sys_trace,
-        call_trace,
-        log_trace,
-        net_trace,
-        debug):
+        sys_trace = False,
+        call_trace = False,
+        log_trace = False,
+        net_trace = False,
+        debug = False):
     global num_of_failed_commands
     num_of_failed_commands = 0
     global executed_commands

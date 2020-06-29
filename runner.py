@@ -2,7 +2,7 @@
 from subprocess import PIPE, Popen
 from datetime import datetime
 from threading import Thread
-from os import remove
+from os import remove, path
 import argparse
 import logging
 import psutil
@@ -108,6 +108,8 @@ def get_memory():
 # Creates the log file
 def create_log_file(log_file):
     log_file = '{}'.format(datetime.now().strftime(log_file + '_%H_%M_%d_%m_%Y.log'))
+    if path.exists(log_file):
+        remove(log_file)
     global logger
     logger = logging.getLogger('runner{}'.format(num_of_failed_commands))
     hdlr = logging.FileHandler('{}'.format(log_file))
@@ -186,6 +188,10 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
         
         if net_trace:
             pcap_file_name = '/home/matan/runner_number_{}_date'.format(num_of_failed_commands)
+            
+            if path.exists(log_file):
+                remove(log_file)
+                        
             write_net_trace(command_thread, pcap_file_name)    
         else: 
             command_thread.join()

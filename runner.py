@@ -75,6 +75,7 @@ def create_arguments():
     return args
 
 # Execute the desired command
+# Function Parameters: string (The command to execute), boolean (If the user choose the --call-trace option or not)
 def run_command(command, call_trace):
     try:
         global pid
@@ -143,6 +144,7 @@ def get_memory():
     memory = float("{:.2f}".format(psutil.virtual_memory().used / 1073741824))
 
 # Creates the log file
+# Function Parameters: string (the path of the log file, without date)
 def create_log_file(log_file):
     log_file = '{}'.format(
         datetime.now().strftime(
@@ -162,14 +164,17 @@ def create_log_file(log_file):
     return log_file
 
 # Write an error message to the log file
+# Function Parameters: string (the message to write to the log file)
 def write_error_log(message):
     logger.error(message)
 
 # Write an info message to the log file
+# Function Parameters: string (the message to write to the log file)
 def write_info_log(message):
     logger.info(message)
 
 # Creates pcap file
+# Function Parameters: string (the path of the pcap file, without date)
 def create_pcap_file(pcap_file_name):
     pcap_file_name = '{}'.format(
         datetime.now().strftime(
@@ -185,6 +190,7 @@ def create_pcap_file(pcap_file_name):
     return pcap_file_name
 
 # Create a ‘pcap’ file with the network traffic during the execution.
+# Function Parameters: Thread (The thread object that execute the desired command), string (the path of the pcap file)
 def write_net_trace(command_thread, pcap_file_name):
     pcap_file_name = create_pcap_file(pcap_file_name)
     tcpdump_command = 'tcpdump -w {}'.format(pcap_file_name)
@@ -207,14 +213,23 @@ def print_statistics():
             executed_commands -
             num_of_failed_commands,
             num_of_failed_commands))
-
-# Handle ctrl+c
+"""
+Handle ctrl+c
+Function Parameters: int(The type of the signal that sent to the script), 
+frame (It point to the frame that was interrupted by the signal)
+"""
 def signal_handler(sig, frame):
     print("Program was interrupted by Ctrl+C!")
     print_statistics()
     sys.exit(0)
 
-# Function that run the desired comand and adds fitures if needed
+""" 
+Function that run the desired comand and adds fitures if needed.
+Function Parameters: string (The command to execute), int (The number of times to execute the command), 
+int (The number of times that the command can fail), boolean (If the user choose the --sys-trace option or not),
+boolean (If the user choose the --call-trace option or not), boolean (If the user choose the --log-trace option or not),
+boolean (If the user choose the --net-trace option or not) and boolean (If the user choose the --debug option or not)
+"""
 def create_runner(
         command,
         command_num,

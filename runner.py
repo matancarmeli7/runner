@@ -119,7 +119,7 @@ def create_log_file(log_file):
     global logger
     logger = logging.getLogger('runner{}'.format(num_of_failed_commands))
     hdlr = logging.FileHandler('{}'.format(log_file))
-    print(hdlr.baseFilename)
+    print(log_file)
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     hdlr.setFormatter(formatter)
     logger.addHandler(hdlr)
@@ -171,7 +171,7 @@ def signal_handler(sig, frame):
     sys.exit(0)
     
 # Function that run the desired comand and adds fitures if needed
-def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace, net_trace):
+def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace, net_trace, debug):
     global num_of_failed_commands
     num_of_failed_commands = 0
     global executed_commands
@@ -207,6 +207,10 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
             num_of_failed_commands += 1
             
             if sys_trace or call_trace or log_trace:
+                
+                if debug:
+                    pdb.set_trace()
+                    
                 log_file = 'runner_number_{}_date'.format(num_of_failed_commands)
                 create_log_file(log_file)
                 
@@ -232,7 +236,13 @@ def create_runner(command, command_num, failed, sys_trace, call_trace, log_trace
                     write_info_log(network_counters_message)
                     memory_message = "The used memory is: {}".format(memory)
                     write_info_log(memory_message)
-                               
+            else:
+                if debug:
+                    pdb.set_trace()
+                    
+        else:
+            if debug:
+                pdb.set_trace()           
             
         if (num_of_failed_commands == failed and
             num_of_failed_commands != 0):
@@ -252,5 +262,5 @@ if __name__ == "__main__":
         pdb.set_trace()
         
     create_runner(
-        command, args.c, args.failed_count, args.sys_trace, args.call_trace, args.log_trace, args.net_trace)
+        command, args.c, args.failed_count, args.sys_trace, args.call_trace, args.log_trace, args.net_trace, args.debug)
     print_statistics()
